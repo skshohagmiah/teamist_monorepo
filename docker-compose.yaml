@@ -1,0 +1,138 @@
+version: '3.8'
+services:
+  # Frontend Service
+  frontend:
+    build: 
+      context: ./frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api-gateway
+    environment:
+      - NEXT_PUBLIC_API_GATEWAY_URL=http://api-gateway:4000
+
+  # API Gateway
+  api-gateway:
+    build: 
+      context: ./services/api-gateway
+    ports:
+      - "4000:4000"
+    environment:
+      - JWT_SECRET=${JWT_SECRET}
+      - AUTH_SERVICE_URL=http://auth-service:3001
+      - TASK_SERVICE_URL=http://task-service:3002
+      - CHAT_SERVICE_URL=http://chat-service:3003
+    depends_on:
+      - auth-service
+      - task-service
+      - chat-service
+
+  # Kafka and Zookeeper for Event Streaming
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  # Authentication Service
+  auth-service:
+    build: 
+      context: ./services/auth-service
+    ports:
+      - "3001:3000"
+    environment:
+      - MONGODB_URI=mongodb://auth-db:27017/teamist-auth
+      - JWT_SECRET=${JWT_SECRET}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    depends_on:
+      - auth-db
+      - kafka
+
+  # Authentication Database
+  auth-db:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - auth-data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=teamist-auth
+
+  # Task Service
+  task-service:
+    build: 
+      context: ./services/task-service
+    ports:
+      - "3002:3000"
+    environment:
+      - MONGODB_URI=mongodb://task-db:27017/teamist-tasks
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    depends_on:
+      - task-db
+      - kafka
+
+  # Task Database
+  task-db:
+    image: mongo:latest
+    ports:
+      - "27018:27017"
+    volumes:
+      - task-data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=teamist-tasks
+
+  # Chat Service
+  chat-service:
+    build: 
+      context: ./services/chat-service
+    ports:
+      - "3003:3000"
+    environment:
+      - MONGODB_URI=mongodb://chat-db:27017/teamist-chats
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    depends_on:
+      - chat-db
+      - kafka
+
+  # Chat Database
+  chat-db:
+    image: mongo:latest
+    ports:
+      - "27019:27017"
+    volumes:
+      - chat-data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=teamist-chats
+
+  # Monitoring and Observability
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3030:3000"
+    depends_on:
+      - prometheus
+
+volumes:
+  auth-data:
+  task-data:
+  chat-data:
