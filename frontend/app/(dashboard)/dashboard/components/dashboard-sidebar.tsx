@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { CheckSquare, MessageSquare, Calendar, FileText, Image, Settings, ChevronLeft, ChevronRight } from 'lucide-react'
+import { CheckSquare, MessageSquare, Calendar, FileText, Image, Settings, ChevronLeft, ChevronRight, PenBox } from 'lucide-react'
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -11,7 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 const sidebarItems = [
   { name: 'Tasks', icon: CheckSquare, href: '/dashboard/tasks' },
   { name: 'Chats', icon: MessageSquare, href: '/dashboard/chats' },
-  { name: 'Meetings', icon: Calendar, href: '/dashboard/meetings' },
+  { name: 'Drawing', icon: PenBox, href: '/dashboard/drawing' },
   { name: 'Media', icon: Image, href: '/dashboard/media' },
   { name: 'Personal Notes', icon: FileText, href: '/dashboard/notes' },
   { name: 'Settings', icon: Settings, href: '/dashboard/settings' },

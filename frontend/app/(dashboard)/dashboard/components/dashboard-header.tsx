@@ -123,7 +123,7 @@ export function DashboardHeader() {
             </Popover>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="ml-4 flex items-center">
+                <Button variant="secondary" className="ml-4 flex items-center">
                   <Avatar className="h-8 w-8">
                     <AvatarImage src="/placeholder-avatar.jpg" alt="@johndoe" />
                     <AvatarFallback>JD</AvatarFallback>
