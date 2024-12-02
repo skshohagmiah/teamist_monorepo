@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button"
 
 export function Hero() {
   return (
-    <div className="bg-background">
+    <div className="bg-gradient-to-b from-white via-purple-100 to-white">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32">
         <div className="text-center">
           <h1 className="text-4xl font-extrabold tracking-tight text-primary sm:text-5xl md:text-6xl">

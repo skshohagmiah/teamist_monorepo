@@ -2,13 +2,15 @@
 
 import React, { useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { Upload, Download, Share2, Trash2, Search, Grid, List } from 'lucide-react'
+import { Upload, Download, Share2, Trash2, Search, Grid, List, FileIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useToast } from '@/hooks/use-toast'
+import { Badge } from '@/components/ui/badge'
+import { ScrollArea } from '@/components/ui/scroll-area'
 
 export type FileType = {
   id: string
@@ -93,14 +95,14 @@ const TeamMediaManager = () => {
     return (
       <div
         {...getRootProps()}
-        className={`border-2 border-dashed rounded-lg p-4 text-center ${
-          isDragActive ? 'border-primary bg-primary/10' : 'border-gray-300'
+        className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+          isDragActive ? 'border-primary bg-primary/10' : 'border-gray-300 hover:border-primary/50'
         }`}
       >
         <input {...getInputProps()} />
         <Upload className="mx-auto h-12 w-12 text-gray-400" />
         <p className="mt-2 text-sm text-gray-600">Drag and drop files here, or</p>
-        <Button onClick={open} className="mt-2">
+        <Button onClick={open} className="mt-4">
           Select Files
         </Button>
       </div>
@@ -108,32 +110,43 @@ const TeamMediaManager = () => {
   }
 
   const FileGrid = () => (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 bg-white p-2">
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
       {filteredFiles.map((file) => (
-        <Card key={file.id} className="overflow-hidden">
-          <CardContent className="p-0">
+        <Card key={file.id} className="overflow-hidden transition-shadow hover:shadow-lg">
+          <CardContent className="p-4">
             {file.type.startsWith('image/') ? (
-              <img src={file.url} alt={file.name} className="w-full h-48 object-cover" />
+              <img src={file.url} alt={file.name} className="w-full h-48 object-cover rounded-md" />
             ) : (
-              <div className="w-full h-48 flex items-center justify-center bg-gray-100">
-                <span className="text-4xl">{file.type.split('/')[0].charAt(0).toUpperCase()}</span>
+              <div className="w-full h-48 flex items-center justify-center bg-gray-100 rounded-md">
+                <FileIcon className="h-24 w-24 text-gray-400" />
               </div>
             )}
           </CardContent>
-          <CardFooter className="flex flex-col items-start p-4">
+          <CardFooter className="flex flex-col items-start p-4 bg-gray-50">
             <h3 className="font-semibold text-sm mb-1 truncate w-full">{file.name}</h3>
-            <p className="text-xs text-gray-500 mb-2">
-              {(file.size / 1024 / 1024).toFixed(2)} MB • {new Date(file.uploadedAt).toLocaleDateString()}
+            <div className="flex justify-between items-center w-full mb-2">
+              <Badge variant="secondary" className="text-xs">
+                {file.type.split('/')[1].toUpperCase()}
+              </Badge>
+              <span className="text-xs text-gray-500">
+                {(file.size / 1024 / 1024).toFixed(2)} MB
+              </span>
+            </div>
+            <p className="text-xs text-gray-500 mb-4">
+              Uploaded on {new Date(file.uploadedAt).toLocaleDateString()}
             </p>
             <div className="flex justify-between w-full">
-              <Button variant="outline" size="icon" onClick={() => handleFileDownload(file)}>
-                <Download className="h-4 w-4" />
+              <Button variant="outline" size="sm" onClick={() => handleFileDownload(file)}>
+                <Download className="h-4 w-4 mr-2" />
+                Download
               </Button>
-              <Button variant="outline" size="icon" onClick={() => handleFileShare(file)}>
-                <Share2 className="h-4 w-4" />
+              <Button variant="outline" size="sm" onClick={() => handleFileShare(file)}>
+                <Share2 className="h-4 w-4 mr-2" />
+                Share
               </Button>
-              <Button variant="outline" size="icon" onClick={() => handleFileDelete(file.id)}>
-                <Trash2 className="h-4 w-4" />
+              <Button variant="outline" size="sm" onClick={() => handleFileDelete(file.id)}>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
               </Button>
             </div>
           </CardFooter>
@@ -143,88 +156,107 @@ const TeamMediaManager = () => {
   )
 
   const FileList = () => (
-    <Table className='bg-white p-2'>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>Type</TableHead>
-          <TableHead>Size</TableHead>
-          <TableHead>Uploaded</TableHead>
-          <TableHead>Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {filteredFiles.map((file) => (
-          <TableRow key={file.id}>
-            <TableCell className="font-medium">{file.name}</TableCell>
-            <TableCell>{file.type}</TableCell>
-            <TableCell>{(file.size / 1024 / 1024).toFixed(2)} MB</TableCell>
-            <TableCell>{new Date(file.uploadedAt).toLocaleDateString()}</TableCell>
-            <TableCell>
-              <div className="flex space-x-2">
-                <Button variant="outline" size="icon" onClick={() => handleFileDownload(file)}>
-                  <Download className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="icon" onClick={() => handleFileShare(file)}>
-                  <Share2 className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="icon" onClick={() => handleFileDelete(file.id)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </TableCell>
+    <Card>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Type</TableHead>
+            <TableHead>Size</TableHead>
+            <TableHead>Uploaded</TableHead>
+            <TableHead>Actions</TableHead>
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {filteredFiles.map((file) => (
+            <TableRow key={file.id}>
+              <TableCell className="font-medium">{file.name}</TableCell>
+              <TableCell>
+                <Badge variant="secondary">
+                  {file.type.split('/')[1].toUpperCase()}
+                </Badge>
+              </TableCell>
+              <TableCell>{(file.size / 1024 / 1024).toFixed(2)} MB</TableCell>
+              <TableCell>{new Date(file.uploadedAt).toLocaleDateString()}</TableCell>
+              <TableCell>
+                <div className="flex space-x-2">
+                  <Button variant="outline" size="sm" onClick={() => handleFileDownload(file)}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Download
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => handleFileShare(file)}>
+                    <Share2 className="h-4 w-4 mr-2" />
+                    Share
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => handleFileDelete(file.id)}>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </Card>
   )
 
   return (
-    <div className="bg-slate-50 min-h-screen p-4 space-y-4">
-      <h1 className="text-2xl font-bold">Team Media Manager</h1>
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white p-2">
-        <FileUploader />
-        <div className="flex items-center gap-2">
-          <Button
-            variant={view === 'grid' ? 'default' : 'outline'}
-            size="icon"
-            onClick={() => setView('grid')}
-          >
-            <Grid className="h-4 w-4" />
-          </Button>
-          <Button
-            variant={view === 'list' ? 'default' : 'outline'}
-            size="icon"
-            onClick={() => setView('list')}
-          >
-            <List className="h-4 w-4" />
-          </Button>
+    <div className="bg-purple-50 min-h-screen p-8 space-y-8">
+      <div className="mx-auto">
+        <h1 className="text-3xl font-bold mb-8">Team Media Manager</h1>
+        <Card className="mb-8">
+          <CardContent className="p-6">
+            <FileUploader />
+          </CardContent>
+        </Card>
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8">
+          <div className="flex items-center gap-2">
+            <Button
+              variant={view === 'grid' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setView('grid')}
+            >
+              <Grid className="h-4 w-4 mr-2" />
+              Grid
+            </Button>
+            <Button
+              variant={view === 'list' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setView('list')}
+            >
+              <List className="h-4 w-4 mr-2" />
+              List
+            </Button>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+            <div className="relative flex-grow">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <Input
+                className="pl-10 w-full sm:w-64"
+                placeholder="Search files..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <Select value={filterType} onValueChange={setFilterType}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Filter by type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="image/">Images</SelectItem>
+                <SelectItem value="video/">Videos</SelectItem>
+                <SelectItem value="audio/">Audio</SelectItem>
+                <SelectItem value="application/">Documents</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
+        <ScrollArea className="h-[calc(100vh-300px)]">
+          {view === 'grid' ? <FileGrid /> : <FileList />}
+        </ScrollArea>
       </div>
-      <div className="flex flex-col sm:flex-row gap-4 bg-white p-2">
-        <div className="relative flex-grow">
-          <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <Input
-            className="pl-8"
-            placeholder="Search files..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <Select value={filterType} onValueChange={setFilterType}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filter by type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="image/">Images</SelectItem>
-            <SelectItem value="video/">Videos</SelectItem>
-            <SelectItem value="audio/">Audio</SelectItem>
-            <SelectItem value="application/">Documents</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      {view === 'grid' ? <FileGrid /> : <FileList />}
     </div>
   )
 }

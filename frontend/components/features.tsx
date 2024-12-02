@@ -29,7 +29,7 @@ export function Features() {
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <div className="mx-auto max-w-2xl lg:text-center">
           <h2 className="text-base font-semibold leading-7 text-primary">Powerful Features</h2>
-          <p className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
+          <p className="mt-2 text-4xl font-bold tracking-tight sm:text-4xl">
             Everything you need to manage your team
           </p>
           <p className="mt-6 text-lg leading-8 text-muted-foreground">
@@ -39,8 +39,8 @@ export function Features() {
         <div className="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-none">
           <dl className="grid max-w-xl grid-cols-1 gap-x-8 gap-y-16 lg:max-w-none lg:grid-cols-4">
             {features.map((feature) => (
-              <div key={feature.name} className="flex flex-col items-start">
-                <div className="rounded-md bg-primary/10 p-2 ring-1 ring-primary/20">
+              <div key={feature.name} className="flex flex-col items-start bg-slate-100 p-4 rounded-sm">
+                <div className="rounded-md bg-purple-100 p-2  ring-primary/20">
                   <feature.icon className="h-6 w-6 text-primary" aria-hidden="true" />
                 </div>
                 <dt className="mt-4 font-semibold">{feature.name}</dt>

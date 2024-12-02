@@ -351,7 +351,7 @@ export default function TaskManagementBoard() {
   }, [tasks]);
 
   return (
-    <div className="p-4 bg-gray-100 min-h-screen">
+    <div className="p-8 bg-purple-50 min-h-screen">
       {/* Top Bar with Filters */}
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Task Management</h1>

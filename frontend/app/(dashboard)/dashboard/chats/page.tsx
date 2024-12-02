@@ -157,8 +157,8 @@ export default function ChatPage() {
       {/* Sidebar */}
       <div className="w-1/4 bg-gray-100 border-r p-4 space-y-4">
         {/* Search Bar */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+        <div className="relative border border-black rounded-sm overflow-hidden text-black">
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
           <Input 
             placeholder="Search chats" 
             className="pl-10"
@@ -168,7 +168,7 @@ export default function ChatPage() {
         </div>
 
         {/* Chat Rooms List */}
-        <div className="space-y-2">
+        <div className="space-y-2 divide-y-2">
           {filteredRooms.map(room => (
             <div 
               key={room.id} 
@@ -220,7 +220,7 @@ export default function ChatPage() {
       </div>
 
       {/* Chat Window */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col bg-purple-50 ">
         {selectedRoom ? (
           <>
             {/* Chat Header */}
