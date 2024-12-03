@@ -333,7 +333,7 @@ export default function CollaborativeDrawingBoard() {
   }, [handleResize]);
 
   return (
-    <div className="p-4 bg-gray-100 min-h-screen">
+    <div className="p-4  min-h-screen">
       <div className="flex flex-col space-y-4">
         <Card className="p-4">
           <h1 className="text-2xl font-bold mb-4">Team Collaboration Drawing Board</h1>

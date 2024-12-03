@@ -155,7 +155,7 @@ export default function ChatPage() {
   return (
     <div className="flex h-screen">
       {/* Sidebar */}
-      <div className="w-1/4 bg-gray-100 border-r p-4 space-y-4">
+      <div className="w-1/4  border-r p-4 space-y-4">
         {/* Search Bar */}
         <div className="relative border border-black rounded-sm overflow-hidden text-black">
           <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -220,7 +220,7 @@ export default function ChatPage() {
       </div>
 
       {/* Chat Window */}
-      <div className="flex-1 flex flex-col bg-purple-50 ">
+      <div className="flex-1 flex flex-col ">
         {selectedRoom ? (
           <>
             {/* Chat Header */}

@@ -1,5 +1,6 @@
 "use client"
 
+import { z } from "zod"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
@@ -12,8 +13,37 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { Lock, Mail, User, EyeOff, Eye, LogIn, UserPlus, ArrowRight, Github, Twitter, Facebook } from 'lucide-react'
+import { Lock, Mail, User, EyeOff, Eye, LogIn, UserPlus } from 'lucide-react'
+import { FaGoogle } from 'react-icons/fa'
 import { cn } from "@/lib/utils"
+import axios from 'axios';
+
+
+const URL = 'http://localhost:3001'
+
+// Zod Validation Schemas
+const emailSchema = z.string().email("Please enter a valid email address")
+const passwordSchema = z.string()
+  .min(8, "Password must be at least 8 characters long")
+  .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+  .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+  .regex(/[0-9]/, "Password must contain at least one number")
+  .regex(/[!@#$%^&*()]/, "Password must contain at least one special character")
+
+const signUpSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters long"),
+  email: emailSchema,
+  password: passwordSchema,
+  confirmPassword: z.string()
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
+})
+
+const signInSchema = z.object({
+  email: emailSchema,
+  password: z.string().min(1, "Password is required")
+})
 
 export function AuthModals() {
   const [isSignInOpen, setIsSignInOpen] = useState(false)
@@ -23,51 +53,68 @@ export function AuthModals() {
     signUp: false,
     confirm: false
   })
-  const [formErrors, setFormErrors] = useState({
-    email: "",
-    password: "",
-    confirmPassword: ""
-  })
+  const [signInErrors, setSignInErrors] = useState<{
+    email?: string;
+    password?: string;
+  }>({})
+  const [signUpErrors, setSignUpErrors] = useState<{
+    name?: string;
+    email?: string;
+    password?: string;
+    confirmPassword?: string;
+  }>({})
 
-  const validateEmail = (email: string) => {
-    const re = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
-    return re.test(String(email).toLowerCase())
-  }
-
-  const handleSignIn = (e: React.FormEvent) => {
-    e.preventDefault()
-    // Add your sign-in logic here
-  }
-
-  const handleSignUp = (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
     const form = e.target as HTMLFormElement
     const email = form.email.value
     const password = form.password.value
+
+    try {
+      const data = signInSchema.parse({ email, password })
+
+      const res = await axios.post(URL + '/auth/login', data)
+      console.log("Sign in successful")
+      setSignInErrors({})
+      setIsSignInOpen(false)
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const errorMap = error.flatten().fieldErrors
+        setSignInErrors({
+          email: errorMap.email?.[0],
+          password: errorMap.password?.[0]
+        })
+      }
+    }
+  }
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const form = e.target as HTMLFormElement
+    //@ts-ignore
+    const name = form.name?.value
+    const email = form.email.value
+    const password = form.password.value
     const confirmPassword = form.confirmPassword.value
 
-    let errors = {
-      email: "",
-      password: "",
-      confirmPassword: ""
-    }
+    try {
+      const data = signUpSchema.parse({ name, email, password, confirmPassword })
 
-    if (!validateEmail(email)) {
-      errors.email = "Please enter a valid email address"
-    }
-
-    if (password.length < 8) {
-      errors.password = "Password must be at least 8 characters long"
-    }
-
-    if (password !== confirmPassword) {
-      errors.confirmPassword = "Passwords do not match"
-    }
-
-    setFormErrors(errors)
-
-    if (!errors.email && !errors.password && !errors.confirmPassword) {
-      // Add your sign-up logic here
+      const res = await axios.post(URL + '/auth/register', data)
+      console.log(res, 'response form auth service')
+      console.log("Sign up successful", data)
+      setSignUpErrors({})
+      setIsSignUpOpen(false)
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const errorMap = error.flatten().fieldErrors
+        setSignUpErrors({
+          name: errorMap.name?.[0],
+          email: errorMap.email?.[0],
+          password: errorMap.password?.[0],
+          confirmPassword: errorMap.confirmPassword?.[0]
+        })
+      }
     }
   }
 
@@ -98,12 +145,14 @@ export function AuthModals() {
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                 <Input
                   id="email"
+                  name="email"
                   type="email"
                   placeholder="Enter your email"
-                  className="pl-10"
+                  className={cn("pl-10", signInErrors.email && "border-red-500")}
                   required
                 />
               </div>
+              {signInErrors.email && <p className="text-sm text-red-500">{signInErrors.email}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
@@ -111,35 +160,35 @@ export function AuthModals() {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                 <Input
                   id="password"
+                  name="password"
                   type={passwordVisible.signIn ? "text" : "password"}
                   placeholder="Enter your password"
-                  className="pl-10 pr-10"
+                  className={cn("pl-10 pr-10", signInErrors.password && "border-red-500")}
                   required
                 />
-                <button 
-                  type="button" 
-                  onClick={() => setPasswordVisible(prev => ({...prev, signIn: !prev.signIn}))}
+                <button
+                  type="button"
+                  onClick={() => setPasswordVisible(prev => ({ ...prev, signIn: !prev.signIn }))}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
                 >
                   {passwordVisible.signIn ? <Eye size={18} /> : <EyeOff size={18} />}
                 </button>
               </div>
+              {signInErrors.password && <p className="text-sm text-red-500">{signInErrors.password}</p>}
             </div>
             <Button type="submit" className="w-full">Sign In</Button>
           </form>
           <div className="mt-4">
             <Separator className="my-4" />
             <div className="space-y-2">
-              <SocialButton icon={<Github size={18} />} label="GitHub" />
-              <SocialButton icon={<Twitter size={18} />} label="Twitter" />
-              <SocialButton icon={<Facebook size={18} />} label="Facebook" />
+              <SocialButton icon={<FaGoogle size={18} />} label="Google" />
             </div>
           </div>
           <p className="text-center text-sm text-gray-500 mt-4">
             Don't have an account?{" "}
-            <Button 
-              variant="link" 
-              className="p-0" 
+            <Button
+              variant="link"
+              className="p-0"
               onClick={() => {
                 setIsSignInOpen(false)
                 setIsSignUpOpen(true)
@@ -164,6 +213,21 @@ export function AuthModals() {
           </DialogHeader>
           <form onSubmit={handleSignUp} className="space-y-4 mt-4">
             <div className="space-y-2">
+              <Label htmlFor="signup-name">Name</Label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <Input
+                  id="signup-name"
+                  name="name"
+                  type="text"
+                  placeholder="Enter your Name"
+                  className={cn("pl-10", signUpErrors.name && "border-red-500")}
+                  required
+                />
+              </div>
+              {signUpErrors.name && <p className="text-sm text-red-500">{signUpErrors.name}</p>}
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="signup-email">Email</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
@@ -172,11 +236,11 @@ export function AuthModals() {
                   name="email"
                   type="email"
                   placeholder="Enter your email"
-                  className={cn("pl-10", formErrors.email && "border-red-500")}
+                  className={cn("pl-10", signUpErrors.email && "border-red-500")}
                   required
                 />
               </div>
-              {formErrors.email && <p className="text-sm text-red-500">{formErrors.email}</p>}
+              {signUpErrors.email && <p className="text-sm text-red-500">{signUpErrors.email}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="signup-password">Password</Label>
@@ -187,18 +251,18 @@ export function AuthModals() {
                   name="password"
                   type={passwordVisible.signUp ? "text" : "password"}
                   placeholder="Create a password"
-                  className={cn("pl-10 pr-10", formErrors.password && "border-red-500")}
+                  className={cn("pl-10 pr-10", signUpErrors.password && "border-red-500")}
                   required
                 />
-                <button 
-                  type="button" 
-                  onClick={() => setPasswordVisible(prev => ({...prev, signUp: !prev.signUp}))}
+                <button
+                  type="button"
+                  onClick={() => setPasswordVisible(prev => ({ ...prev, signUp: !prev.signUp }))}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
                 >
                   {passwordVisible.signUp ? <Eye size={18} /> : <EyeOff size={18} />}
                 </button>
               </div>
-              {formErrors.password && <p className="text-sm text-red-500">{formErrors.password}</p>}
+              {signUpErrors.password && <p className="text-sm text-red-500">{signUpErrors.password}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="confirm-password">Confirm Password</Label>
@@ -209,34 +273,32 @@ export function AuthModals() {
                   name="confirmPassword"
                   type={passwordVisible.confirm ? "text" : "password"}
                   placeholder="Confirm your password"
-                  className={cn("pl-10 pr-10", formErrors.confirmPassword && "border-red-500")}
+                  className={cn("pl-10 pr-10", signUpErrors.confirmPassword && "border-red-500")}
                   required
                 />
-                <button 
-                  type="button" 
-                  onClick={() => setPasswordVisible(prev => ({...prev, confirm: !prev.confirm}))}
+                <button
+                  type="button"
+                  onClick={() => setPasswordVisible(prev => ({ ...prev, confirm: !prev.confirm }))}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
                 >
                   {passwordVisible.confirm ? <Eye size={18} /> : <EyeOff size={18} />}
                 </button>
               </div>
-              {formErrors.confirmPassword && <p className="text-sm text-red-500">{formErrors.confirmPassword}</p>}
+              {signUpErrors.confirmPassword && <p className="text-sm text-red-500">{signUpErrors.confirmPassword}</p>}
             </div>
             <Button type="submit" className="w-full">Sign Up</Button>
           </form>
           <div className="mt-4">
             <Separator className="my-4" />
             <div className="space-y-2">
-              <SocialButton icon={<Github size={18} />} label="GitHub" />
-              <SocialButton icon={<Twitter size={18} />} label="Twitter" />
-              <SocialButton icon={<Facebook size={18} />} label="Facebook" />
+              <SocialButton icon={<FaGoogle size={18} />} label="Google" />
             </div>
           </div>
           <p className="text-center text-sm text-gray-500 mt-4">
             Already have an account?{" "}
-            <Button 
-              variant="link" 
-              className="p-0" 
+            <Button
+              variant="link"
+              className="p-0"
               onClick={() => {
                 setIsSignUpOpen(false)
                 setIsSignInOpen(true)
@@ -250,4 +312,3 @@ export function AuthModals() {
     </div>
   )
 }
-

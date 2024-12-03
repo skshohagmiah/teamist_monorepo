@@ -202,7 +202,7 @@ const TeamMediaManager = () => {
   )
 
   return (
-    <div className="bg-purple-50 min-h-screen p-8 space-y-8">
+    <div className=" min-h-screen p-8 space-y-8">
       <div className="mx-auto">
         <h1 className="text-3xl font-bold mb-8">Team Media Manager</h1>
         <Card className="mb-8">

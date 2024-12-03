@@ -351,15 +351,14 @@ export default function TaskManagementBoard() {
   }, [tasks]);
 
   return (
-    <div className="p-8 bg-purple-50 min-h-screen">
+    <div className="p-8 bg-white min-h-screen">
       {/* Top Bar with Filters */}
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-4 ">
         <h1 className="text-2xl font-bold">Task Management</h1>
         <div className="flex space-x-2 items-center">
           <Input
             placeholder="Search tasks"
             className="w-64"
-            icon={<Search className="h-4 w-4" />}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -397,7 +396,7 @@ export default function TaskManagementBoard() {
           </Select>
 
           {/* Tags Filter */}
-          <div className="flex space-x-1">
+          {/* <div className="flex space-x-1">
             {allTags.map(tag => (
               <Button
                 key={tag}
@@ -414,7 +413,7 @@ export default function TaskManagementBoard() {
                 {tag}
               </Button>
             ))}
-          </div>
+          </div> */}
         </div>
       </div>
 
