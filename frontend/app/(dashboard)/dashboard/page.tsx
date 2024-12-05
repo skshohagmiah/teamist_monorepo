@@ -1,22 +1,27 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { CalendarIcon, MessageCircle, ImageIcon, Users, LogOut, Menu, PenTool, Bell } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { usePathname, useRouter } from 'next/navigation'
 
 export default function DashboardPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const router = useRouter();
+  const pathname = usePathname()
+
+
+  useEffect(() => {
+    if (pathname?.includes('/dashboard')) {
+      router.push('/dashboard/tasks')
+    }
+  }, [])
+
+
+  return null;
 
   return (
     <div className="flex h-screen ">
@@ -83,16 +88,16 @@ export default function DashboardPage() {
                   ].map((item, i) => (
                     <div key={i} className="flex items-start space-x-4 mb-4 p-2 hover:bg-gray-50 rounded-lg transition-colors">
                       <Avatar className={`
-                        ${item.type === 'task' ? 'bg-blue-100' : 
-                          item.type === 'chat' ? 'bg-green-100' : 
-                          item.type === 'media' ? 'bg-purple-100' : 
-                          item.type === 'whiteboard' ? 'bg-pink-100' : 'bg-gray-100'}
+                        ${item.type === 'task' ? 'bg-blue-100' :
+                          item.type === 'chat' ? 'bg-green-100' :
+                            item.type === 'media' ? 'bg-purple-100' :
+                              item.type === 'whiteboard' ? 'bg-pink-100' : 'bg-gray-100'}
                       `}>
                         <AvatarFallback className={`
-                          ${item.type === 'task' ? 'text-blue-600' : 
-                            item.type === 'chat' ? 'text-green-600' : 
-                            item.type === 'media' ? 'text-purple-600' : 
-                            item.type === 'whiteboard' ? 'text-pink-600' : 'text-gray-600'}
+                          ${item.type === 'task' ? 'text-blue-600' :
+                            item.type === 'chat' ? 'text-green-600' :
+                              item.type === 'media' ? 'text-purple-600' :
+                                item.type === 'whiteboard' ? 'text-pink-600' : 'text-gray-600'}
                         `}>{item.type[0].toUpperCase()}</AvatarFallback>
                       </Avatar>
                       <div>

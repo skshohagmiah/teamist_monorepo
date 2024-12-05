@@ -1,52 +1,56 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import React, { useState, useMemo } from 'react'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
-import { Plus, Trash2, Edit, Search, GripVertical, UserCircle, Filter, X, CheckCircle, Clock } from 'lucide-react'
+import { format } from 'date-fns'
+import { Plus, Trash2, Edit, Search, GripVertical, UserCircle, Filter, X, Clock, UserPlus } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
-import { format } from 'date-fns'
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Textarea } from "@/components/ui/textarea"
 
 // Interfaces
 interface Task {
-  id: string;
-  title: string;
-  description?: string;
-  assignedTo?: string;
-  status: string;
-  priority: 'low' | 'medium' | 'high';
-  deadline?: Date;
-  tags?: string[];
+  id: string
+  title: string
+  description?: string
+  assignedTo?: string
+  status: string
+  priority: 'low' | 'medium' | 'high'
+  deadline?: Date
+  tags?: string[]
 }
 
 interface Column {
-  id: string;
-  title: string;
-  taskIds: string[];
+  id: string
+  title: string
+  taskIds: string[]
 }
 
 interface TeamMember {
-  id: string;
-  name: string;
-  avatar?: string;
+  id: string
+  name: string
+  email: string
+  avatar?: string
+  role?: string
 }
 
 // Initial data
-const teamMembers: TeamMember[] = [
-  { id: 'user1', name: 'John Doe', avatar: '/avatar1.png' },
-  { id: 'user2', name: 'Jane Smith', avatar: '/avatar2.png' },
-  { id: 'user3', name: 'Mike Johnson', avatar: '/avatar3.png' }
-];
+const initialTeamMembers: TeamMember[] = [
+  { id: 'user1', name: 'John Doe', email: 'john@example.com', avatar: '/avatar1.png', role: 'Developer' },
+  { id: 'user2', name: 'Jane Smith', email: 'jane@example.com', avatar: '/avatar2.png', role: 'Designer' },
+  { id: 'user3', name: 'Mike Johnson', email: 'mike@example.com', avatar: '/avatar3.png', role: 'Product Manager' }
+]
 
 const initialColumns: Column[] = [
   { id: 'todo', title: 'To Do', taskIds: ['task1', 'task2'] },
   { id: 'in-progress', title: 'In Progress', taskIds: ['task3'] },
   { id: 'done', title: 'Done', taskIds: ['task4'] }
-];
+]
 
 const initialTasks: { [key: string]: Task } = {
   'task1': {
@@ -89,135 +93,220 @@ const initialTasks: { [key: string]: Task } = {
     deadline: new Date('2024-02-10'),
     tags: ['testing', 'qa']
   }
-};
+}
 
 export default function TaskManagementBoard() {
-  const [columns, setColumns] = useState<Column[]>(initialColumns);
-  const [tasks, setTasks] = useState<{ [key: string]: Task }>(initialTasks);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterPriority, setFilterPriority] = useState<string | null>(null);
-  const [filterAssignee, setFilterAssignee] = useState<string | null>(null);
-  const [filterTags, setFilterTags] = useState<string[]>([]);
-  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
-  const [currentTask, setCurrentTask] = useState<Task | null>(null);
+  const [columns, setColumns] = useState<Column[]>(initialColumns)
+  const [tasks, setTasks] = useState<{ [key: string]: Task }>(initialTasks)
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(initialTeamMembers)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filterPriority, setFilterPriority] = useState<string | null>(null)
+  const [filterAssignee, setFilterAssignee] = useState<string | null>(null)
+  const [filterTags, setFilterTags] = useState<string[]>([])
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
+  const [isColumnModalOpen, setIsColumnModalOpen] = useState(false)
+  const [isInviteMemberModalOpen, setIsInviteMemberModalOpen] = useState(false)
+  const [currentTask, setCurrentTask] = useState<Task | null>(null)
+  const [newColumnTitle, setNewColumnTitle] = useState('')
+  const [newMemberData, setNewMemberData] = useState({
+    name: '',
+    email: '',
+    role: ''
+  })
 
   const onDragEnd = (result: DropResult) => {
-    const { destination, source, draggableId } = result;
+    const { destination, source, draggableId, type } = result
 
-    if (!destination) return;
-    if (destination.droppableId === source.droppableId && destination.index === source.index) return;
+    if (!destination) return
 
-    const sourceColumn = columns.find(col => col.id === source.droppableId);
-    const destColumn = columns.find(col => col.id === destination.droppableId);
+    if (
+      destination.droppableId === source.droppableId &&
+      destination.index === source.index
+    ) {
+      return
+    }
 
-    if (!sourceColumn || !destColumn) return;
+    if (type === 'COLUMN') {
+      const newColumns = Array.from(columns)
+      const [reorderedColumn] = newColumns.splice(source.index, 1)
+      newColumns.splice(destination.index, 0, reorderedColumn)
 
-    const newSourceTaskIds = Array.from(sourceColumn.taskIds);
-    newSourceTaskIds.splice(source.index, 1);
+      setColumns(newColumns)
+      return
+    }
 
-    const newDestTaskIds = Array.from(destColumn.taskIds);
-    newDestTaskIds.splice(destination.index, 0, draggableId);
+    const sourceColumn = columns.find(col => col.id === source.droppableId)
+    const destColumn = columns.find(col => col.id === destination.droppableId)
 
-    const newColumns = columns.map(col => {
-      if (col.id === source.droppableId) return { ...col, taskIds: newSourceTaskIds };
-      if (col.id === destination.droppableId) return { ...col, taskIds: newDestTaskIds };
-      return col;
-    });
+    if (!sourceColumn || !destColumn) return
 
-    const updatedTasks = {
-      ...tasks,
+    if (sourceColumn === destColumn) {
+      const newTaskIds = Array.from(sourceColumn.taskIds)
+      newTaskIds.splice(source.index, 1)
+      newTaskIds.splice(destination.index, 0, draggableId)
+
+      const newColumn = {
+        ...sourceColumn,
+        taskIds: newTaskIds
+      }
+
+      setColumns(columns.map(col =>
+        col.id === newColumn.id ? newColumn : col
+      ))
+    } else {
+      const sourceTaskIds = Array.from(sourceColumn.taskIds)
+      sourceTaskIds.splice(source.index, 1)
+      const newSourceColumn = {
+        ...sourceColumn,
+        taskIds: sourceTaskIds
+      }
+
+      const destTaskIds = Array.from(destColumn.taskIds)
+      destTaskIds.splice(destination.index, 0, draggableId)
+      const newDestColumn = {
+        ...destColumn,
+        taskIds: destTaskIds
+      }
+
+      setColumns(columns.map(col =>
+        col.id === newSourceColumn.id ? newSourceColumn :
+        col.id === newDestColumn.id ? newDestColumn : col
+      ))
+    }
+
+    setTasks(prevTasks => ({
+      ...prevTasks,
       [draggableId]: {
-        ...tasks[draggableId],
+        ...prevTasks[draggableId],
         status: destination.droppableId
       }
-    };
-
-    setColumns(newColumns);
-    setTasks(updatedTasks);
-  };
+    }))
+  }
 
   const addTask = (columnId: string) => {
-    const newTaskId = `task-${Date.now()}`;
+    const newTaskId = `task-${Date.now()}`
     const newTask: Task = {
       id: newTaskId,
       title: 'New Task',
       status: columnId,
       priority: 'medium'
-    };
+    }
 
     setTasks(prev => ({
       ...prev,
       [newTaskId]: newTask
-    }));
+    }))
 
     setColumns(prev => prev.map(col =>
       col.id === columnId
         ? { ...col, taskIds: [...col.taskIds, newTaskId] }
         : col
-    ));
+    ))
 
-    setCurrentTask(newTask);
-    setIsTaskModalOpen(true);
-  };
+    setCurrentTask(newTask)
+    setIsTaskModalOpen(true)
+  }
 
   const editTask = (updatedTask: Task) => {
     setTasks(prev => ({
       ...prev,
       [updatedTask.id]: updatedTask
-    }));
-    setIsTaskModalOpen(false);
-  };
+    }))
+    setIsTaskModalOpen(false)
+  }
 
   const deleteTask = (taskId: string) => {
-    const newTasks = { ...tasks };
-    delete newTasks[taskId];
+    const newTasks = { ...tasks }
+    delete newTasks[taskId]
 
     const newColumns = columns.map(col => ({
       ...col,
       taskIds: col.taskIds.filter(id => id !== taskId)
-    }));
+    }))
 
-    setTasks(newTasks);
-    setColumns(newColumns);
-    setIsTaskModalOpen(false);
-  };
+    setTasks(newTasks)
+    setColumns(newColumns)
+    setIsTaskModalOpen(false)
+  }
+
+  const addColumn = () => {
+    if (!newColumnTitle.trim()) return
+
+    const newColumnId = `column-${Date.now()}`
+    const newColumn: Column = {
+      id: newColumnId,
+      title: newColumnTitle,
+      taskIds: []
+    }
+
+    setColumns(prev => [...prev, newColumn])
+    setNewColumnTitle('')
+    setIsColumnModalOpen(false)
+  }
+
+  const deleteColumn = (columnId: string) => {
+    const newColumns = columns.filter(col => col.id !== columnId)
+
+    const newTasks = { ...tasks }
+    columns.find(col => col.id === columnId)?.taskIds.forEach(taskId => {
+      delete newTasks[taskId]
+    })
+
+    setColumns(newColumns)
+    setTasks(newTasks)
+  }
+
+  const inviteMember = () => {
+    if (!newMemberData.name.trim() || !newMemberData.email.trim()) return
+
+    const newMember: TeamMember = {
+      id: `user-${Date.now()}`,
+      ...newMemberData,
+      avatar: `/avatar-${Math.floor(Math.random() * 3) + 1}.png`
+    }
+
+    setTeamMembers(prev => [...prev, newMember])
+    setNewMemberData({ name: '', email: '', role: '' })
+    setIsInviteMemberModalOpen(false)
+  }
 
   const filteredAndSortedTasks = useMemo(() => {
-    let filteredTasks = Object.values(tasks);
+    let filteredTasks = Object.values(tasks)
 
     if (searchTerm) {
       filteredTasks = filteredTasks.filter(task =>
         task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (task.description && task.description.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
+      )
     }
 
     if (filterPriority) {
-      filteredTasks = filteredTasks.filter(task => task.priority === filterPriority);
+      filteredTasks = filteredTasks.filter(task => task.priority === filterPriority)
     }
 
     if (filterAssignee) {
-      filteredTasks = filteredTasks.filter(task => task.assignedTo === filterAssignee);
+      filteredTasks = filteredTasks.filter(task => task.assignedTo === filterAssignee)
     }
 
     if (filterTags.length > 0) {
       filteredTasks = filteredTasks.filter(task =>
         task.tags && filterTags.every(tag => task.tags?.includes(tag))
-      );
+      )
     }
 
     return filteredTasks.sort((a, b) =>
       (a.deadline?.getTime() || 0) - (b.deadline?.getTime() || 0)
-    );
-  }, [tasks, searchTerm, filterPriority, filterAssignee, filterTags]);
+    )
+  }, [tasks, searchTerm, filterPriority, filterAssignee, filterTags])
 
+  // Task Edit Modal Component
   const TaskEditModal = () => {
-    if (!currentTask) return null;
+    if (!currentTask) return null
 
     const handleSubmit = (e: React.FormEvent) => {
-      e.preventDefault();
-      editTask(currentTask);
-    };
+      e.preventDefault()
+      editTask(currentTask)
+    }
 
     return (
       <Dialog open={isTaskModalOpen} onOpenChange={setIsTaskModalOpen}>
@@ -227,28 +316,30 @@ export default function TaskManagementBoard() {
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <Label>Title</Label>
+              <Label htmlFor="title">Title</Label>
               <Input
+                id="title"
                 value={currentTask.title}
                 onChange={(e) => setCurrentTask({ ...currentTask, title: e.target.value })}
                 required
               />
             </div>
             <div>
-              <Label>Description</Label>
-              <Input
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
                 value={currentTask.description || ''}
                 onChange={(e) => setCurrentTask({ ...currentTask, description: e.target.value })}
               />
             </div>
             <div>
-              <Label>Assigned To</Label>
+              <Label htmlFor="assignee">Assignee</Label>
               <Select
-                value={currentTask.assignedTo}
+                value={currentTask.assignedTo || ''}
                 onValueChange={(value) => setCurrentTask({ ...currentTask, assignedTo: value })}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select assignee" />
+                <SelectTrigger id="assignee">
+                  <SelectValue placeholder="Select Assignee" />
                 </SelectTrigger>
                 <SelectContent>
                   {teamMembers.map(member => (
@@ -260,13 +351,15 @@ export default function TaskManagementBoard() {
               </Select>
             </div>
             <div>
-              <Label>Priority</Label>
+              <Label htmlFor="priority">Priority</Label>
               <Select
                 value={currentTask.priority}
-                onValueChange={(value: Task['priority']) => setCurrentTask({ ...currentTask, priority: value })}
+                onValueChange={(value: 'low' | 'medium' | 'high') =>
+                  setCurrentTask({ ...currentTask, priority: value })
+                }
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select priority" />
+                <SelectTrigger id="priority">
+                  <SelectValue placeholder="Select Priority" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="low">Low</SelectItem>
@@ -276,25 +369,12 @@ export default function TaskManagementBoard() {
               </Select>
             </div>
             <div>
-              <Label>Deadline</Label>
+              <Label htmlFor="deadline">Deadline</Label>
               <Input
+                id="deadline"
                 type="date"
                 value={currentTask.deadline ? format(currentTask.deadline, 'yyyy-MM-dd') : ''}
-                onChange={(e) => setCurrentTask({
-                  ...currentTask,
-                  deadline: e.target.value ? new Date(e.target.value) : undefined
-                })}
-              />
-            </div>
-            <div>
-              <Label>Tags</Label>
-              <Input
-                value={currentTask.tags?.join(', ') || ''}
-                onChange={(e) => setCurrentTask({
-                  ...currentTask,
-                  tags: e.target.value ? e.target.value.split(',').map(tag => tag.trim()) : []
-                })}
-                placeholder="Enter tags separated by commas"
+                onChange={(e) => setCurrentTask({ ...currentTask, deadline: new Date(e.target.value) })}
               />
             </div>
             <DialogFooter>
@@ -310,51 +390,180 @@ export default function TaskManagementBoard() {
           </form>
         </DialogContent>
       </Dialog>
-    );
-  };
+    )
+  }
 
-  const allTags = useMemo(() => {
-    const tagSet = new Set<string>();
-    Object.values(tasks).forEach(task =>
-      task.tags?.forEach(tag => tagSet.add(tag))
-    );
-    return Array.from(tagSet);
-  }, [tasks]);
+  // Add Column Modal Component
+  const AddColumnModal = () => (
+    <Dialog open={isColumnModalOpen} onOpenChange={setIsColumnModalOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Add New Column</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="columnTitle">Column Title</Label>
+            <Input
+              id="columnTitle"
+              value={newColumnTitle}
+              onChange={(e) => setNewColumnTitle(e.target.value)}
+              placeholder="Enter column title"
+            />
+          </div>
+          <DialogFooter>
+            <Button onClick={addColumn}>Create Column</Button>
+          </DialogFooter>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+
+  // Invite Member Modal Component
+  const InviteMemberModal = () => (
+    <Dialog open={isInviteMemberModalOpen} onOpenChange={setIsInviteMemberModalOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Invite Team Member</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="memberName">Name</Label>
+            <Input
+              id="memberName"
+              value={newMemberData.name}
+              onChange={(e) => setNewMemberData(prev => ({ ...prev, name: e.target.value }))}
+              placeholder="Enter member name"
+            />
+          </div>
+          <div>
+            <Label htmlFor="memberEmail">Email</Label>
+            <Input
+              id="memberEmail"
+              value={newMemberData.email}
+              onChange={(e) => setNewMemberData(prev => ({ ...prev, email: e.target.value }))}
+              placeholder="Enter member email"
+              type="email"
+            />
+          </div>
+          <div>
+            <Label htmlFor="memberRole">Role</Label>
+            <Input
+              id="memberRole"
+              value={newMemberData.role}
+              onChange={(e) => setNewMemberData(prev => ({ ...prev, role: e.target.value }))}
+              placeholder="Enter member role"
+            />
+          </div>
+          <DialogFooter>
+            <Button onClick={inviteMember}>Invite Member</Button>
+          </DialogFooter>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 
   return (
     <div className="p-8 bg-white min-h-screen">
-      <div className="flex justify-between items-center mb-4">
+      {/* Team Members and Header Section */}
+      <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Task Management</h1>
-        <div className="flex space-x-2 items-center">
-          <Input
-            placeholder="Search tasks"
-            className="w-64"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        <div className="flex items-center space-x-4">
+          {/* Team Members Display */}
+          <div className="flex -space-x-2">
+            {teamMembers.map((member) => (
+              <Avatar key={member.id} className="border-2 border-white">
+                <AvatarImage src={member.avatar} alt={member.name}  className='border border-purple-300'/>
+                <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
+              </Avatar>
+            ))}
+          </div>
+
+          {/* Invite Member Button */}
+          <Button
+            variant="outline"
+            onClick={() => setIsInviteMemberModalOpen(true)}
+          >
+            <UserPlus className="mr-2 h-4 w-4" /> Invite Member
+          </Button>
+        </div>
+      </div>
+
+      {/* Search and Filter Section */}
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex space-x-2">
+          {/* Search Input */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <Input
+              placeholder="Search tasks..."
+              className="pl-10 w-64"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          {/* Priority Filter */}
           <Select
-            value={filterPriority || undefined}
+            value={filterPriority || ''}
             onValueChange={(value) => setFilterPriority(value || null)}
           >
             <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filter Priority" />
+              <SelectValue placeholder="Priority">
+                {filterPriority ? (
+                  <div className="flex items-center">
+                    <span className="capitalize">
+                      {filterPriority} Priority
+                    </span>
+                    <X
+                      className="ml-2 h-4 w-4 text-gray-500"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setFilterPriority(null);
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <>
+                    <Filter className="mr-2 h-4 w-4" /> Priority
+                  </>
+                )}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Priorities</SelectItem>
               <SelectItem value="low">Low Priority</SelectItem>
               <SelectItem value="medium">Medium Priority</SelectItem>
               <SelectItem value="high">High Priority</SelectItem>
             </SelectContent>
           </Select>
+
+          {/* Assignee Filter */}
           <Select
-            value={filterAssignee || undefined}
+            value={filterAssignee || ''}
             onValueChange={(value) => setFilterAssignee(value || null)}
           >
             <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filter Assignee" />
+              <SelectValue placeholder="Assignee">
+                {filterAssignee ? (
+                  <div className="flex items-center">
+                    <span>
+                      {teamMembers.find(m => m.id === filterAssignee)?.name}
+                    </span>
+                    <X
+                      className="ml-2 h-4 w-4 text-gray-500"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setFilterAssignee(null);
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <>
+                    <UserCircle className="mr-2 h-4 w-4" /> Assignee
+                  </>
+                )}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Assignees</SelectItem>
               {teamMembers.map(member => (
                 <SelectItem key={member.id} value={member.id}>
                   {member.name}
@@ -362,122 +571,148 @@ export default function TaskManagementBoard() {
               ))}
             </SelectContent>
           </Select>
+
+          {/* Add Column Button */}
+          <Button
+            variant="outline"
+            onClick={() => setIsColumnModalOpen(true)}
+          >
+            <Plus className="mr-2 h-4 w-4" /> Add Column
+          </Button>
         </div>
       </div>
 
-      <TaskEditModal />
-
+      {/* Drag and Drop Board */}
       <DragDropContext onDragEnd={onDragEnd}>
-        <div className="grid grid-cols-3 gap-4">
-          {columns.map((column) => (
-            <Card key={column.id} className="bg-white shadow-md">
-              <CardHeader className="flex flex-row justify-between items-center">
-                <CardTitle>{column.title}</CardTitle>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => addTask(column.id)}
+        <Droppable
+          droppableId="board"
+          direction="horizontal"
+          type="COLUMN"
+        >
+          {(provided) => (
+            <div
+              {...provided.droppableProps}
+              ref={provided.innerRef}
+              className="grid grid-cols-4 gap-4"
+            >
+              {columns.map((column, columnIndex) => (
+                <Draggable
+                  key={column.id}
+                  draggableId={column.id}
+                  index={columnIndex}
                 >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </CardHeader>
-
-              <Droppable droppableId={column.id}>
-                {(provided) => (
-                  <CardContent
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    className="space-y-2"
-                  >
-                    {column.taskIds
-                      .map(taskId => tasks[taskId])
-                      .filter(task =>
-                        filteredAndSortedTasks.some(filteredTask => filteredTask.id === task.id)
-                      )
-                      .map((task, index) => (
-                        <Draggable
-                          key={task.id}
-                          draggableId={task.id}
-                          index={index}
+                  {(columnProvided) => (
+                    <Card
+                      ref={columnProvided.innerRef}
+                      {...columnProvided.draggableProps}
+                      className="bg-gray-100"
+                    >
+                      <CardHeader {...columnProvided.dragHandleProps} className="flex flex-row items-center justify-between">
+                        <CardTitle className="flex items-center">
+                          <GripVertical className="mr-2 text-gray-500" />
+                          {column.title}
+                        </CardTitle>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => addTask(column.id)}
                         >
-                          {(provided) => (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                              className={`
-                                p-3 bg-white border rounded-md shadow-sm relative
-                                ${task.priority === 'high' ? 'border-red-500' :
-                                  task.priority === 'medium' ? 'border-yellow-500' :
-                                    'border-green-500'}
-                              `}
-                            >
-                              <div className="absolute top-2 right-2 flex space-x-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    setCurrentTask(task);
-                                    setIsTaskModalOpen(true);
-                                  }}
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </CardHeader>
+
+                      <Droppable droppableId={column.id} type="TASK">
+                        {(taskProvided) => (
+                          <CardContent
+                            ref={taskProvided.innerRef}
+                            {...taskProvided.droppableProps}
+                            className="space-y-2"
+                          >
+                            {column.taskIds.map((taskId, taskIndex) => {
+                              const task = tasks[taskId];
+                              if (!task) return null;
+
+                              return (
+                                <Draggable
+                                  key={task.id}
+                                  draggableId={task.id}
+                                  index={taskIndex}
                                 >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                              </div>
-
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <h3 className="font-semibold">{task.title}</h3>
-                                  {task.description && (
-                                    <p className="text-sm text-gray-500 mt-1">
-                                      {task.description}
-                                    </p>
+                                  {(taskProvided) => (
+                                    <Card
+                                      ref={taskProvided.innerRef}
+                                      {...taskProvided.draggableProps}
+                                      {...taskProvided.dragHandleProps}
+                                      className={`
+                                        p-3 border-l-4 
+                                        ${task.priority === 'high' ? 'border-red-500' :
+                                          task.priority === 'medium' ? 'border-yellow-500' :
+                                            'border-green-500'}
+                                      `}
+                                    >
+                                      <div className="flex justify-between items-start">
+                                        <div>
+                                          <h3 className="font-semibold">{task.title}</h3>
+                                          {task.description && (
+                                            <p className="text-xs text-gray-500 mt-1">
+                                              {task.description}
+                                            </p>
+                                          )}
+                                          <div className="flex items-center mt-2 space-x-2">
+                                            {task.assignedTo && (
+                                              <Avatar className="w-5 h-5">
+                                                <AvatarImage
+                                                  src={
+                                                    teamMembers.find(m => m.id === task.assignedTo)?.avatar
+                                                  }
+                                                />
+                                                <AvatarFallback>
+                                                  {teamMembers.find(m => m.id === task.assignedTo)?.name.charAt(0)}
+                                                </AvatarFallback>
+                                              </Avatar>
+                                            )}
+                                            {task.deadline && (
+                                              <div className="flex items-center text-xs text-gray-500">
+                                                <Clock className="mr-1 h-3 w-3" />
+                                                {format(task.deadline, 'MMM dd')}
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => {
+                                            setCurrentTask(task);
+                                            setIsTaskModalOpen(true);
+                                          }}
+                                        >
+                                          <Edit className="h-4 w-4" />
+                                        </Button>
+                                      </div>
+                                    </Card>
                                   )}
-
-                                  <div className="mt-2 flex items-center space-x-2">
-                                    {task.tags && task.tags.map(tag => (
-                                      <span
-                                        key={tag}
-                                        className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded"
-                                      >
-                                        {tag}
-                                      </span>
-                                    ))}
-                                  </div>
-                                </div>
-
-                                <div className="flex flex-col items-end">
-                                  {task.assignedTo && (
-                                    <div className="flex items-center space-x-1">
-                                      <UserCircle className="h-5 w-5 text-blue-500" />
-                                      <span className="text-xs text-gray-600">
-                                        {teamMembers.find(m => m.id === task.assignedTo)?.name}
-                                      </span>
-                                    </div>
-                                  )}
-
-                                  {task.deadline && (
-                                    <div className="flex items-center space-x-1 mt-1">
-                                      <Clock className="h-4 w-4 text-gray-500" />
-                                      <span className="text-xs text-gray-600">
-                                        {format(task.deadline, 'MMM dd')}
-                                      </span>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </Draggable>
-                      ))}
-                    {provided.placeholder}
-                  </CardContent>
-                )}
-              </Droppable>
-            </Card>
-          ))}
-        </div>
+                                </Draggable>
+                              );
+                            })}
+                            {taskProvided.placeholder}
+                          </CardContent>
+                        )}
+                      </Droppable>
+                    </Card>
+                  )}
+                </Draggable>
+              ))}
+              {provided.placeholder}
+            </div>
+          )}
+        </Droppable>
       </DragDropContext>
+
+      {/* Modals */}
+      <TaskEditModal />
+      <AddColumnModal />
+      <InviteMemberModal />
     </div>
   );
 }
