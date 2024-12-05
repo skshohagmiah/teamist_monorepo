@@ -2,10 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
-import {
-  Plus, Trash2, Edit, Search,
-  GripVertical, UserCircle, Filter, X, CheckCircle, Clock
-} from 'lucide-react'
+import { Plus, Trash2, Edit, Search, GripVertical, UserCircle, Filter, X, CheckCircle, Clock } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -14,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label"
 import { format } from 'date-fns'
 
-// Comprehensive Task Interface
+// Interfaces
 interface Task {
   id: string;
   title: string;
@@ -26,35 +23,31 @@ interface Task {
   tags?: string[];
 }
 
-// Column Interface
 interface Column {
   id: string;
   title: string;
   taskIds: string[];
 }
 
-// Team Member Interface
 interface TeamMember {
   id: string;
   name: string;
   avatar?: string;
 }
 
-// Initial Team Members
+// Initial data
 const teamMembers: TeamMember[] = [
   { id: 'user1', name: 'John Doe', avatar: '/avatar1.png' },
   { id: 'user2', name: 'Jane Smith', avatar: '/avatar2.png' },
   { id: 'user3', name: 'Mike Johnson', avatar: '/avatar3.png' }
 ];
 
-// Initial Columns
 const initialColumns: Column[] = [
   { id: 'todo', title: 'To Do', taskIds: ['task1', 'task2'] },
   { id: 'in-progress', title: 'In Progress', taskIds: ['task3'] },
   { id: 'done', title: 'Done', taskIds: ['task4'] }
 ];
 
-// Initial Tasks
 const initialTasks: { [key: string]: Task } = {
   'task1': {
     id: 'task1',
@@ -99,21 +92,15 @@ const initialTasks: { [key: string]: Task } = {
 };
 
 export default function TaskManagementBoard() {
-  // State management
   const [columns, setColumns] = useState<Column[]>(initialColumns);
   const [tasks, setTasks] = useState<{ [key: string]: Task }>(initialTasks);
-
-  // Filter and search states
   const [searchTerm, setSearchTerm] = useState('');
   const [filterPriority, setFilterPriority] = useState<string | null>(null);
   const [filterAssignee, setFilterAssignee] = useState<string | null>(null);
   const [filterTags, setFilterTags] = useState<string[]>([]);
-
-  // Modal and editing states
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
 
-  // Drag and Drop Handler
   const onDragEnd = (result: DropResult) => {
     const { destination, source, draggableId } = result;
 
@@ -149,7 +136,6 @@ export default function TaskManagementBoard() {
     setTasks(updatedTasks);
   };
 
-  // Add New Task
   const addTask = (columnId: string) => {
     const newTaskId = `task-${Date.now()}`;
     const newTask: Task = {
@@ -170,12 +156,10 @@ export default function TaskManagementBoard() {
         : col
     ));
 
-    // Open edit modal for new task
     setCurrentTask(newTask);
     setIsTaskModalOpen(true);
   };
 
-  // Edit Task
   const editTask = (updatedTask: Task) => {
     setTasks(prev => ({
       ...prev,
@@ -184,15 +168,10 @@ export default function TaskManagementBoard() {
     setIsTaskModalOpen(false);
   };
 
-  // Delete Task
   const deleteTask = (taskId: string) => {
-    const task = tasks[taskId];
-
-    // Remove task from tasks
     const newTasks = { ...tasks };
     delete newTasks[taskId];
 
-    // Remove task ID from columns
     const newColumns = columns.map(col => ({
       ...col,
       taskIds: col.taskIds.filter(id => id !== taskId)
@@ -203,11 +182,9 @@ export default function TaskManagementBoard() {
     setIsTaskModalOpen(false);
   };
 
-  // Filtered and sorted tasks
   const filteredAndSortedTasks = useMemo(() => {
     let filteredTasks = Object.values(tasks);
 
-    // Search filter
     if (searchTerm) {
       filteredTasks = filteredTasks.filter(task =>
         task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -215,30 +192,25 @@ export default function TaskManagementBoard() {
       );
     }
 
-    // Priority filter
     if (filterPriority) {
       filteredTasks = filteredTasks.filter(task => task.priority === filterPriority);
     }
 
-    // Assignee filter
     if (filterAssignee) {
       filteredTasks = filteredTasks.filter(task => task.assignedTo === filterAssignee);
     }
 
-    // Tags filter
     if (filterTags.length > 0) {
       filteredTasks = filteredTasks.filter(task =>
         task.tags && filterTags.every(tag => task.tags?.includes(tag))
       );
     }
 
-    // Sort tasks by deadline
     return filteredTasks.sort((a, b) =>
       (a.deadline?.getTime() || 0) - (b.deadline?.getTime() || 0)
     );
   }, [tasks, searchTerm, filterPriority, filterAssignee, filterTags]);
 
-  // Task Edit Modal
   const TaskEditModal = () => {
     if (!currentTask) return null;
 
@@ -341,7 +313,6 @@ export default function TaskManagementBoard() {
     );
   };
 
-  // Unique tags extraction
   const allTags = useMemo(() => {
     const tagSet = new Set<string>();
     Object.values(tasks).forEach(task =>
@@ -352,8 +323,7 @@ export default function TaskManagementBoard() {
 
   return (
     <div className="p-8 bg-white min-h-screen">
-      {/* Top Bar with Filters */}
-      <div className="flex justify-between items-center mb-4 ">
+      <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Task Management</h1>
         <div className="flex space-x-2 items-center">
           <Input
@@ -376,8 +346,6 @@ export default function TaskManagementBoard() {
               <SelectItem value="high">High Priority</SelectItem>
             </SelectContent>
           </Select>
-
-
           <Select
             value={filterAssignee || undefined}
             onValueChange={(value) => setFilterAssignee(value || null)}
@@ -394,33 +362,11 @@ export default function TaskManagementBoard() {
               ))}
             </SelectContent>
           </Select>
-
-          {/* Tags Filter */}
-          {/* <div className="flex space-x-1">
-            {allTags.map(tag => (
-              <Button
-                key={tag}
-                variant={filterTags.includes(tag) ? 'default' : 'outline'}
-                size="sm"
-                onClick={() =>
-                  setFilterTags(prev =>
-                    prev.includes(tag)
-                      ? prev.filter(t => t !== tag)
-                      : [...prev, tag]
-                  )
-                }
-              >
-                {tag}
-              </Button>
-            ))}
-          </div> */}
         </div>
       </div>
 
-      {/* Task Edit Modal */}
       <TaskEditModal />
 
-      {/* Drag and Drop Board */}
       <DragDropContext onDragEnd={onDragEnd}>
         <div className="grid grid-cols-3 gap-4">
           {columns.map((column) => (
@@ -466,7 +412,6 @@ export default function TaskManagementBoard() {
                                     'border-green-500'}
                               `}
                             >
-                              {/* Task Actions */}
                               <div className="absolute top-2 right-2 flex space-x-1">
                                 <Button
                                   variant="ghost"
@@ -480,7 +425,6 @@ export default function TaskManagementBoard() {
                                 </Button>
                               </div>
 
-                              {/* Task Content */}
                               <div className="flex justify-between items-start">
                                 <div>
                                   <h3 className="font-semibold">{task.title}</h3>
@@ -490,7 +434,6 @@ export default function TaskManagementBoard() {
                                     </p>
                                   )}
 
-                                  {/* Task Metadata */}
                                   <div className="mt-2 flex items-center space-x-2">
                                     {task.tags && task.tags.map(tag => (
                                       <span
@@ -503,7 +446,6 @@ export default function TaskManagementBoard() {
                                   </div>
                                 </div>
 
-                                {/* Task Assignment and Deadline */}
                                 <div className="flex flex-col items-end">
                                   {task.assignedTo && (
                                     <div className="flex items-center space-x-1">
@@ -539,3 +481,4 @@ export default function TaskManagementBoard() {
     </div>
   );
 }
+

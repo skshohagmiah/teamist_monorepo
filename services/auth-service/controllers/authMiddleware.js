@@ -2,12 +2,12 @@ import jwt from 'jsonwebtoken';
 
 export const authMiddleware = (req, res, next) => {
     // Get token from header
-    const token = req.header('Authorization')?.replace('Bearer ', '');
+    const token = req.body;
 
     // Check if no token
     if (!token) {
-        return res.status(401).json({ 
-            message: 'No token, authorization denied' 
+        return res.status(401).json({
+            message: 'No token, authorization denied'
         });
     }
 
@@ -16,11 +16,13 @@ export const authMiddleware = (req, res, next) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
         // Add user from payload
-        req.user = decoded;
-        next();
+        res?.status(200).json({
+            valid: true,
+            user: decoded
+        })
     } catch (error) {
-        res.status(401).json({ 
-            message: 'Token is not valid' 
+        res.status(401).json({
+            message: 'Token is not valid'
         });
     }
 };

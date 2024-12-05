@@ -7,9 +7,10 @@ const router = express.Router();
 // Public routes
 router.post('/register', authController.register);
 router.post('/login', authController.login);
+router.post('/verify', authMiddleware);
 router.post('/forgot-password', authController.forgotPassword);
 
 // Protected routes
-router.get('/profile', authMiddleware, authController.profile);
+router.get('/profile', authController.profile);
 
 export default router;
