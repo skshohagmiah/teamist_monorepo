@@ -129,7 +129,7 @@ const authenticateToken = async (req, res, next) => {
 
 // Request Logging Middleware
 app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} data: ${JSON.stringify(req.body)}`);
   next();
 });
 
@@ -167,6 +167,18 @@ const SERVICES = {
   }
 };
 
+app.use('/api/auth/login',(req, res, next) => {
+  console.log("in the auth/login route")
+  next()
+}, createProxyMiddleware({
+  target: "http://localhost:3002",
+  changeOrigin: true,
+  // pathRewrite: {
+  //   '^/api/auth/login': '/auth/login', // Make sure to correctly map to the login path
+  // },
+}));
+
+
 // Proxy Middleware with Service-Specific Rate Limiting
 Object.entries(SERVICES).forEach(([route, { url: target, limiter }]) => {
   app.use(`/api/${route}`, 
@@ -177,7 +189,7 @@ Object.entries(SERVICES).forEach(([route, { url: target, limiter }]) => {
         target, 
         changeOrigin: true,
         pathRewrite: {
-          [`^/api/${route}`]: '', 
+          [`^/api/${route}`]: '/auth', 
         },
       })
     ] :

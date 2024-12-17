@@ -57,35 +57,33 @@ export const authController = {
 
     async verify(req, res) {
         const { token } = req?.body;
-
+    
         if (!token) {
             return res.status(401).json({ message: 'No token provided' });
         }
-
+    
         try {
-            const decoded = await jwt.verify(token, process.env.JWT_SECRET);
-
-            if (decoded && decoded.payload) {
-
-                res?.status(200).json({
-                    valid: true,
-                    user: decoded?.payload
-                })
-                
-            } else {
-                return res.status(403).json({ message: 'Invalid token' });
-            }
+            // Directly verify the token
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+            res.status(200).json({
+                valid: true,
+                user: {
+                    id: decoded.id,
+                    email: decoded.email
+                }
+            });
         } catch (error) {
             console.log('token verification error', error);
-
+    
             if (error.name === 'TokenExpiredError') {
                 return res.status(401).json({ message: 'Token expired' });
             }
-
+    
             return res.status(403).json({ message: 'Token Verification Failed' });
         }
     },
-
+    
     async register(req, res) {
         const { email, password, name } = req?.body;
 

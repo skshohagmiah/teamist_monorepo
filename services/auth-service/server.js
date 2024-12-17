@@ -5,12 +5,17 @@ import dotenv from 'dotenv'
 
 import authRouter from './routes/authRoute.js'
 
-const PORT = process.env.PORT || 3002;
+const PORT = 3002;
 dotenv.config();
 
 const app = express();
 app.use(cors())
 app.use(express.json())
+
+app.use((req, res,next) => {
+    console.log("Hello world")
+    next()
+})
 
 const connectDB = async () => {
     try {
@@ -21,7 +26,6 @@ const connectDB = async () => {
 }
 
 connectDB();
-
 
 
 app.use('/auth', authRouter);

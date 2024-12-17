@@ -12,14 +12,14 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
 import { Lock, Mail, User, EyeOff, Eye, LogIn, UserPlus } from 'lucide-react'
-import { FaGoogle } from 'react-icons/fa'
 import { cn } from "@/lib/utils"
 import axios from 'axios';
+import { toast } from "sonner"
+import { useRouter } from "next/navigation"
 
 
-const URL = 'http://localhost:3001'
+const URL = 'http://localhost:3001/api'
 
 // Zod Validation Schemas
 const emailSchema = z.string().email("Please enter a valid email address")
@@ -27,8 +27,6 @@ const passwordSchema = z.string()
   .min(8, "Password must be at least 8 characters long")
   .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
   .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-  .regex(/[0-9]/, "Password must contain at least one number")
-  .regex(/[!@#$%^&*()]/, "Password must contain at least one special character")
 
 const signUpSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long"),
@@ -46,6 +44,7 @@ const signInSchema = z.object({
 })
 
 export function AuthModals() {
+  const router = useRouter();
   const [isSignInOpen, setIsSignInOpen] = useState(false)
   const [isSignUpOpen, setIsSignUpOpen] = useState(false)
   const [passwordVisible, setPasswordVisible] = useState({
@@ -75,6 +74,7 @@ export function AuthModals() {
 
       const res = await axios.post(URL + '/auth/login', data)
       console.log("Sign in successful")
+      toast('Sign In Succesfull')
       setSignInErrors({})
       setIsSignInOpen(false)
     } catch (error) {
@@ -103,6 +103,7 @@ export function AuthModals() {
       const res = await axios.post(URL + '/auth/register', data)
       console.log(res, 'response form auth service')
       console.log("Sign up successful", data)
+      toast('Sign up successful')
       setSignUpErrors({})
       setIsSignUpOpen(false)
     } catch (error) {
@@ -178,12 +179,12 @@ export function AuthModals() {
             </div>
             <Button type="submit" className="w-full">Sign In</Button>
           </form>
-          <div className="mt-4">
+          {/* <div className="mt-4">
             <Separator className="my-4" />
             <div className="space-y-2">
               <SocialButton icon={<FaGoogle size={18} />} label="Google" />
             </div>
-          </div>
+          </div> */}
           <p className="text-center text-sm text-gray-500 mt-4">
             Don't have an account?{" "}
             <Button
@@ -288,12 +289,12 @@ export function AuthModals() {
             </div>
             <Button type="submit" className="w-full">Sign Up</Button>
           </form>
-          <div className="mt-4">
+          {/* <div className="mt-4">
             <Separator className="my-4" />
             <div className="space-y-2">
               <SocialButton icon={<FaGoogle size={18} />} label="Google" />
             </div>
-          </div>
+          </div> */}
           <p className="text-center text-sm text-gray-500 mt-4">
             Already have an account?{" "}
             <Button
