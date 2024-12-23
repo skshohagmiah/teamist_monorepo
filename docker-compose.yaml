@@ -1,0 +1,55 @@
+version: "3.8"
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - 3000:3000
+    networks:
+      - my-network
+    environment:
+      - REACT_APP_URL=http://localhost:3000
+
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+    ports:
+      - 3001:3001
+    networks:
+      - my-network
+
+  auth-service:
+    build:
+      context: ./services/auth-service
+    ports:
+      - 3002:3002
+    networks:
+      - my-network
+    environment:
+      - MONGODB_URL=mongodb://admin:1234@auth-db:27017/teamist-auth-db?authSource=admin
+    depends_on:
+      - api-gateway
+      - auth-db
+    restart: on-failure
+
+  auth-db:
+    image: mongo:latest
+    ports:
+      - 27017:27017
+    networks:
+      - my-network
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=1234
+      - MONGO_INITDB_DATABASE=teamist-auth-db
+    volumes:
+      - auth-db-volume:/data/db
+      - ./mongo-init:/docker-entrypoint-initdb.d
+    restart: always
+
+networks:
+  my-network:
+
+volumes:
+  auth-db-volume:

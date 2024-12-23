@@ -16,13 +16,14 @@ app.use(express.json())
 
 const connectDB = async () => {
     try {
-        await mongoose.connect(process.env.DB_URL);
+        await mongoose.connect(process.env.MONGODB_URL);
     } catch (error) {
         console.log('DB connect error', error)
     }
 }
 
 connectDB();
+
 
 app.use('/auth', authRouter);
 

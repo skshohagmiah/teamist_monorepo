@@ -1,5 +1,5 @@
 import express from 'express';
-import { createProxyMiddleware } from 'http-proxy-middleware';
+import proxy from 'express-http-proxy';
 import cors from 'cors';
 import helmet from 'helmet';
 import axios from 'axios';
@@ -7,93 +7,45 @@ import rateLimit from 'express-rate-limit';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const AUTH_SERVICE_URL = 'http://localhost:3002'; 
+const AUTH_SERVICE_URL = 'http://auth-service:3002';
 
-// Global Rate Limiter
 const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // limit each IP to 1000 requests per windowMs
-  standardHeaders: true, 
-  legacyHeaders: false, 
+  windowMs: 15 * 60 * 1000,
+  max: 1000,
+  standardHeaders: true,
+  legacyHeaders: false,
   message: {
-    error: 'Too many requests, please try again later',
+    error: 'Too many requests',
     status: 429
-  },
-  handler: (req, res, next, options) => {
-    res.status(options.statusCode).send(options.message);
   }
 });
 
-// Service-Specific Rate Limiters
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit auth routes to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   message: {
-    error: 'Too many authentication attempts, please try again later',
+    error: 'Too many authentication attempts',
     status: 429
   }
 });
 
 const userServiceLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 500, // limit each IP to 500 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 500,
   message: {
-    error: 'Too many requests to user service, please try again later',
+    error: 'Too many requests to user service',
     status: 429
   }
 });
 
-// In-Memory Rate Limiting Middleware
-const inMemoryRateLimiter = () => {
-  const requestCounts = new Map();
-
-  return (req, res, next) => {
-    const ip = req.ip;
-    const now = Date.now();
-    const windowStart = now - (15 * 60 * 1000); // 15 minutes ago
-
-    // Clean up old entries
-    for (let [key, data] of requestCounts.entries()) {
-      if (data.timestamp < windowStart) {
-        requestCounts.delete(key);
-      }
-    }
-
-    // Get or create entry for this IP
-    let ipData = requestCounts.get(ip) || { count: 0, timestamp: now };
-
-    // Increment request count
-    ipData.count++;
-    ipData.timestamp = now;
-    requestCounts.set(ip, ipData);
-
-    // Check total request count
-    if (ipData.count > 1000) {
-      return res.status(429).json({
-        error: 'Too many requests. Please try again later.',
-        status: 429
-      });
-    }
-
-    next();
-  };
-};
-
-// Middleware Application
 app.use(globalLimiter);
-app.use(helmet());
 app.use(express.json());
-app.use(inMemoryRateLimiter());
-
-// CORS Configuration
 app.use(cors({
-  origin: '*', 
+  origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
 }));
 
-// Authentication Middleware
 const authenticateToken = async (req, res, next) => {
-  // Skip authentication for login and registration routes
   if (req.path.includes('/login') || req.path.includes('/register')) {
     return next();
   }
@@ -101,17 +53,16 @@ const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
-  if (token == null) {
+  if (!token) {
     return res.status(401).json({ error: 'No token provided' });
   }
 
   try {
-    // Validate token with auth service
-    const response = await axios.post(`${AUTH_SERVICE_URL}/auth/verify`, 
+    const response = await axios.post(`${AUTH_SERVICE_URL}/auth/verify`,
       { token },
-      { 
+      {
         headers: { 'Content-Type': 'application/json' },
-        timeout: 5000 
+        timeout: 5000
       }
     );
 
@@ -119,21 +70,19 @@ const authenticateToken = async (req, res, next) => {
       req.user = response.data.user;
       next();
     } else {
-      return res.status(403).json({ error: 'Invalid or expired token' });
+      res.status(403).json({ error: 'Invalid token' });
     }
   } catch (error) {
     console.error('Token verification error:', error);
-    return res.status(500).json({ error: 'Authentication service unavailable' });
+    res.status(500).json({ error: 'Auth service unavailable' });
   }
 };
 
-// Request Logging Middleware
 app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} data: ${JSON.stringify(req.body)}`);
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
   next();
 });
 
-// Service Configurations
 const SERVICES = {
   auth: {
     url: AUTH_SERVICE_URL,
@@ -147,71 +96,55 @@ const SERVICES = {
     url: 'http://localhost:4001',
     limiter: rateLimit({
       windowMs: 15 * 60 * 1000,
-      max: 300,
-      message: {
-        error: 'Too many requests to product service',
-        status: 429
-      }
+      max: 300
     })
   },
   orders: {
     url: 'http://localhost:4002',
     limiter: rateLimit({
       windowMs: 15 * 60 * 1000,
-      max: 200,
-      message: {
-        error: 'Too many requests to order service',
-        status: 429
-      }
+      max: 200
     })
   }
 };
 
+app.use('/api/auth', [
+  authLimiter,
+  proxy(AUTH_SERVICE_URL, {
+    proxyReqPathResolver: (req) => {
+      const path = `/auth${req.url}`; // This will preserve the full path
+      console.log(`Proxying to: ${path}`);
+      return path;
+    },
+    proxyErrorHandler: (err, res, next) => {
+      console.error('Proxy Error:', err);
+      res.status(500).json({ error: 'Auth service unavailable' });
+    }
+  })
+]);
 
-
-// Proxy Middleware with Service-Specific Rate Limiting
-Object.entries(SERVICES).forEach(([route, { url: target, limiter }]) => {
-  app.use(`/api/${route}`, 
-    route === 'auth' ? 
-    [
-      limiter,
-      createProxyMiddleware({ 
-        target, 
-        changeOrigin: true,
-        pathRewrite: {
-          [`^/api`]: '', // Removes only the "/api" prefix
-        },
-        
-      })
-    ] :
-    [
+// Other Services Proxy
+Object.entries(SERVICES).forEach(([route, { url, limiter }]) => {
+  if (route !== 'auth') {
+    app.use(`/api/${route}`, [
       authenticateToken,
       limiter,
-      createProxyMiddleware({ 
-        target, 
-        changeOrigin: true,
-        pathRewrite: {
-          [`^/api`]: '', 
+      proxy(url, {
+        proxyReqPathResolver: (req) => {
+          return req.url.replace(`/api/${route}`, '');
         },
-        onProxyRes: (proxyRes, req, res) => {
-          proxyRes.headers['X-Powered-By'] = 'NodeJS API Gateway';
-          if (req.user) {
-            proxyRes.headers['X-User-ID'] = req.user.id;
+        userResDecorator: (proxyRes, proxyResData, userReq, userRes) => {
+          userRes.set('X-Powered-By', 'NodeJS API Gateway');
+          if (userReq.user) {
+            userRes.set('X-User-ID', userReq.user.id);
           }
-        },
-        onError: (err, req, res) => {
-          console.error('Proxy Error:', err);
-          res.status(500).json({
-            error: 'Service unavailable',
-            details: err.message
-          });
+          return proxyResData;
         }
       })
-    ]
-  );
+    ]);
+  }
 });
 
-// Health Check Endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'healthy',
@@ -220,15 +153,13 @@ app.get('/health', (req, res) => {
   });
 });
 
-// 404 Handler
 app.use((req, res) => {
   res.status(404).json({
     error: 'Not Found',
-    message: 'The requested endpoint does not exist'
+    message: 'Endpoint does not exist'
   });
 });
 
-// Error Handling Middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({
@@ -237,8 +168,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start Server
 app.listen(PORT, () => {
-  console.log(`🚪 API Gateway running on port ${PORT}`);
-  console.log(`Proxying services: ${Object.keys(SERVICES).join(', ')}`);
+  console.log(`API Gateway running on port ${PORT}`);
+  console.log(`Services: ${Object.keys(SERVICES).join(', ')}`);
 });

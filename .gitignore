@@ -1,3 +1,28 @@
+# Environment variables
 .env
-.docker-compose.yaml
-/node_modules
+.env.*
+
+# Docker files
+.docker/data
+docker-compose.override.yml
+*.log
+
+# Application files
+node_modules
+dist
+build
+.cache
+
+# Docker volumes
+volumes/
+data/
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS specific files
+.DS_Store
+Thumbs.db
