@@ -94,7 +94,7 @@ app.use(cors({
 // Authentication Middleware
 const authenticateToken = async (req, res, next) => {
   // Skip authentication for login and registration routes
-  if (req.path.includes('/auth/login') || req.path.includes('/auth/register')) {
+  if (req.path.includes('/login') || req.path.includes('/register')) {
     return next();
   }
 
@@ -167,16 +167,6 @@ const SERVICES = {
   }
 };
 
-app.use('/api/auth/login',(req, res, next) => {
-  console.log("in the auth/login route")
-  next()
-}, createProxyMiddleware({
-  target: "http://localhost:3002",
-  changeOrigin: true,
-  // pathRewrite: {
-  //   '^/api/auth/login': '/auth/login', // Make sure to correctly map to the login path
-  // },
-}));
 
 
 // Proxy Middleware with Service-Specific Rate Limiting
@@ -189,8 +179,9 @@ Object.entries(SERVICES).forEach(([route, { url: target, limiter }]) => {
         target, 
         changeOrigin: true,
         pathRewrite: {
-          [`^/api/${route}`]: '/auth', 
+          [`^/api`]: '', // Removes only the "/api" prefix
         },
+        
       })
     ] :
     [
@@ -200,7 +191,7 @@ Object.entries(SERVICES).forEach(([route, { url: target, limiter }]) => {
         target, 
         changeOrigin: true,
         pathRewrite: {
-          [`^/api/${route}`]: '', 
+          [`^/api`]: '', 
         },
         onProxyRes: (proxyRes, req, res) => {
           proxyRes.headers['X-Powered-By'] = 'NodeJS API Gateway';

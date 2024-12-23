@@ -12,10 +12,7 @@ const app = express();
 app.use(cors())
 app.use(express.json())
 
-app.use((req, res,next) => {
-    console.log("Hello world")
-    next()
-})
+
 
 const connectDB = async () => {
     try {
@@ -27,11 +24,7 @@ const connectDB = async () => {
 
 connectDB();
 
-
 app.use('/auth', authRouter);
-
-
-
 
 
 app.listen(PORT, () => console.log("auth server is running on port :", PORT));
