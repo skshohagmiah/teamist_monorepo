@@ -1,7 +1,6 @@
 "use client"
 
 import { z } from "zod"
-import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -14,9 +13,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Lock, Mail, User, EyeOff, Eye, LogIn, UserPlus } from 'lucide-react'
 import { cn } from "@/lib/utils"
-import axios from 'axios';
+import axios from 'axios'
 import { toast } from "sonner"
-import { useRouter } from "next/navigation"
+import { useAuthStore } from "@/store/authenticationStore"
 
 
 const URL = 'http://localhost:3001/api'
@@ -43,25 +42,17 @@ const signInSchema = z.object({
   password: z.string().min(1, "Password is required")
 })
 
-export function AuthModals() {
-  const router = useRouter();
-  const [isSignInOpen, setIsSignInOpen] = useState(false)
-  const [isSignUpOpen, setIsSignUpOpen] = useState(false)
-  const [passwordVisible, setPasswordVisible] = useState({
-    signIn: false,
-    signUp: false,
-    confirm: false
-  })
-  const [signInErrors, setSignInErrors] = useState<{
-    email?: string;
-    password?: string;
-  }>({})
-  const [signUpErrors, setSignUpErrors] = useState<{
-    name?: string;
-    email?: string;
-    password?: string;
-    confirmPassword?: string;
-  }>({})
+export const SignInModal = () => {
+  const {
+    isSignInOpen,
+    setIsSignInOpen,
+    setIsSignUpOpen,
+    passwordVisible,
+    togglePasswordVisibility,
+    signInErrors,
+    setSignInErrors,
+    reset
+  } = useAuthStore()
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -71,11 +62,10 @@ export function AuthModals() {
 
     try {
       const data = signInSchema.parse({ email, password })
-
       const res = await axios.post(URL + '/auth/login', data)
       console.log("Sign in successful")
-      toast('Sign In Succesfull')
-      setSignInErrors({})
+      toast('Sign In Successful')
+      reset()
       setIsSignInOpen(false)
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -88,23 +78,101 @@ export function AuthModals() {
     }
   }
 
+  return (
+    <Dialog open={isSignInOpen} onOpenChange={setIsSignInOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" className="flex items-center gap-2">
+          <LogIn size={18} /> Sign In
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-bold text-center">Welcome Back</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSignIn} className="space-y-4 mt-4">
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                placeholder="Enter your email"
+                className={cn("pl-10", signInErrors.email && "border-red-500")}
+                required
+              />
+            </div>
+            {signInErrors.email && <p className="text-sm text-red-500">{signInErrors.email}</p>}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <Input
+                id="password"
+                name="password"
+                type={passwordVisible.signIn ? "text" : "password"}
+                placeholder="Enter your password"
+                className={cn("pl-10 pr-10", signInErrors.password && "border-red-500")}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => togglePasswordVisibility('signIn')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+              >
+                {passwordVisible.signIn ? <Eye size={18} /> : <EyeOff size={18} />}
+              </button>
+            </div>
+            {signInErrors.password && <p className="text-sm text-red-500">{signInErrors.password}</p>}
+          </div>
+          <Button type="submit" className="w-full">Sign In</Button>
+        </form>
+        <p className="text-center text-sm text-gray-500 mt-4">
+          Don't have an account?{" "}
+          <Button
+            variant="link"
+            className="p-0"
+            onClick={() => {
+              setIsSignInOpen(false)
+              setIsSignUpOpen(true)
+            }}
+          >
+            Sign up
+          </Button>
+        </p>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+export const SignUpModal = () => {
+  const {
+    isSignUpOpen,
+    setIsSignUpOpen,
+    setIsSignInOpen,
+    passwordVisible,
+    togglePasswordVisibility,
+    signUpErrors,
+    setSignUpErrors,
+    reset
+  } = useAuthStore()
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
     const form = e.target as HTMLFormElement
-    //@ts-ignore
-    const name = form.name?.value
+    const name = form.name.value
     const email = form.email.value
     const password = form.password.value
     const confirmPassword = form.confirmPassword.value
 
     try {
       const data = signUpSchema.parse({ name, email, password, confirmPassword })
-
       const res = await axios.post(URL + '/auth/register', data)
-      console.log(res, 'response form auth service')
       console.log("Sign up successful", data)
       toast('Sign up successful')
-      setSignUpErrors({})
+      reset()
       setIsSignUpOpen(false)
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -119,197 +187,117 @@ export function AuthModals() {
     }
   }
 
-  const SocialButton = ({ icon, label }: { icon: React.ReactNode; label: string }) => (
-    <Button variant="outline" className="w-full flex items-center justify-center gap-2">
-      {icon}
-      <span>Sign in with {label}</span>
-    </Button>
+  return (
+    <Dialog open={isSignUpOpen} onOpenChange={setIsSignUpOpen}>
+      <DialogTrigger asChild>
+        <Button className="flex items-center gap-2">
+          <UserPlus size={18} /> Sign Up
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-bold text-center">Create an Account</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSignUp} className="space-y-4 mt-4">
+          <div className="space-y-2">
+            <Label htmlFor="signup-name">Name</Label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <Input
+                id="signup-name"
+                name="name"
+                type="text"
+                placeholder="Enter your Name"
+                className={cn("pl-10", signUpErrors.name && "border-red-500")}
+                required
+              />
+            </div>
+            {signUpErrors.name && <p className="text-sm text-red-500">{signUpErrors.name}</p>}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="signup-email">Email</Label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <Input
+                id="signup-email"
+                name="email"
+                type="email"
+                placeholder="Enter your email"
+                className={cn("pl-10", signUpErrors.email && "border-red-500")}
+                required
+              />
+            </div>
+            {signUpErrors.email && <p className="text-sm text-red-500">{signUpErrors.email}</p>}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="signup-password">Password</Label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <Input
+                id="signup-password"
+                name="password"
+                type={passwordVisible.signUp ? "text" : "password"}
+                placeholder="Create a password"
+                className={cn("pl-10 pr-10", signUpErrors.password && "border-red-500")}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => togglePasswordVisibility('signUp')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+              >
+                {passwordVisible.signUp ? <Eye size={18} /> : <EyeOff size={18} />}
+              </button>
+            </div>
+            {signUpErrors.password && <p className="text-sm text-red-500">{signUpErrors.password}</p>}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirm-password">Confirm Password</Label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <Input
+                id="confirm-password"
+                name="confirmPassword"
+                type={passwordVisible.confirm ? "text" : "password"}
+                placeholder="Confirm your password"
+                className={cn("pl-10 pr-10", signUpErrors.confirmPassword && "border-red-500")}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => togglePasswordVisibility('confirm')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+              >
+                {passwordVisible.confirm ? <Eye size={18} /> : <EyeOff size={18} />}
+              </button>
+            </div>
+            {signUpErrors.confirmPassword && <p className="text-sm text-red-500">{signUpErrors.confirmPassword}</p>}
+          </div>
+          <Button type="submit" className="w-full">Sign Up</Button>
+        </form>
+        <p className="text-center text-sm text-gray-500 mt-4">
+          Already have an account?{" "}
+          <Button
+            variant="link"
+            className="p-0"
+            onClick={() => {
+              setIsSignUpOpen(false)
+              setIsSignInOpen(true)
+            }}
+          >
+            Sign in
+          </Button>
+        </p>
+      </DialogContent>
+    </Dialog>
   )
+}
 
+export const AuthModals = () => {
   return (
     <div className="flex space-x-4">
-      {/* Sign In Modal */}
-      <Dialog open={isSignInOpen} onOpenChange={setIsSignInOpen}>
-        <DialogTrigger asChild>
-          <Button variant="outline" className="flex items-center gap-2">
-            <LogIn size={18} /> Sign In
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-center">Welcome Back</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSignIn} className="space-y-4 mt-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  className={cn("pl-10", signInErrors.email && "border-red-500")}
-                  required
-                />
-              </div>
-              {signInErrors.email && <p className="text-sm text-red-500">{signInErrors.email}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                <Input
-                  id="password"
-                  name="password"
-                  type={passwordVisible.signIn ? "text" : "password"}
-                  placeholder="Enter your password"
-                  className={cn("pl-10 pr-10", signInErrors.password && "border-red-500")}
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setPasswordVisible(prev => ({ ...prev, signIn: !prev.signIn }))}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
-                >
-                  {passwordVisible.signIn ? <Eye size={18} /> : <EyeOff size={18} />}
-                </button>
-              </div>
-              {signInErrors.password && <p className="text-sm text-red-500">{signInErrors.password}</p>}
-            </div>
-            <Button type="submit" className="w-full">Sign In</Button>
-          </form>
-          {/* <div className="mt-4">
-            <Separator className="my-4" />
-            <div className="space-y-2">
-              <SocialButton icon={<FaGoogle size={18} />} label="Google" />
-            </div>
-          </div> */}
-          <p className="text-center text-sm text-gray-500 mt-4">
-            Don't have an account?{" "}
-            <Button
-              variant="link"
-              className="p-0"
-              onClick={() => {
-                setIsSignInOpen(false)
-                setIsSignUpOpen(true)
-              }}
-            >
-              Sign up
-            </Button>
-          </p>
-        </DialogContent>
-      </Dialog>
-
-      {/* Sign Up Modal */}
-      <Dialog open={isSignUpOpen} onOpenChange={setIsSignUpOpen}>
-        <DialogTrigger asChild>
-          <Button className="flex items-center gap-2">
-            <UserPlus size={18} /> Sign Up
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-center">Create an Account</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSignUp} className="space-y-4 mt-4">
-            <div className="space-y-2">
-              <Label htmlFor="signup-name">Name</Label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                <Input
-                  id="signup-name"
-                  name="name"
-                  type="text"
-                  placeholder="Enter your Name"
-                  className={cn("pl-10", signUpErrors.name && "border-red-500")}
-                  required
-                />
-              </div>
-              {signUpErrors.name && <p className="text-sm text-red-500">{signUpErrors.name}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="signup-email">Email</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                <Input
-                  id="signup-email"
-                  name="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  className={cn("pl-10", signUpErrors.email && "border-red-500")}
-                  required
-                />
-              </div>
-              {signUpErrors.email && <p className="text-sm text-red-500">{signUpErrors.email}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="signup-password">Password</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                <Input
-                  id="signup-password"
-                  name="password"
-                  type={passwordVisible.signUp ? "text" : "password"}
-                  placeholder="Create a password"
-                  className={cn("pl-10 pr-10", signUpErrors.password && "border-red-500")}
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setPasswordVisible(prev => ({ ...prev, signUp: !prev.signUp }))}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
-                >
-                  {passwordVisible.signUp ? <Eye size={18} /> : <EyeOff size={18} />}
-                </button>
-              </div>
-              {signUpErrors.password && <p className="text-sm text-red-500">{signUpErrors.password}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirm-password">Confirm Password</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                <Input
-                  id="confirm-password"
-                  name="confirmPassword"
-                  type={passwordVisible.confirm ? "text" : "password"}
-                  placeholder="Confirm your password"
-                  className={cn("pl-10 pr-10", signUpErrors.confirmPassword && "border-red-500")}
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setPasswordVisible(prev => ({ ...prev, confirm: !prev.confirm }))}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
-                >
-                  {passwordVisible.confirm ? <Eye size={18} /> : <EyeOff size={18} />}
-                </button>
-              </div>
-              {signUpErrors.confirmPassword && <p className="text-sm text-red-500">{signUpErrors.confirmPassword}</p>}
-            </div>
-            <Button type="submit" className="w-full">Sign Up</Button>
-          </form>
-          {/* <div className="mt-4">
-            <Separator className="my-4" />
-            <div className="space-y-2">
-              <SocialButton icon={<FaGoogle size={18} />} label="Google" />
-            </div>
-          </div> */}
-          <p className="text-center text-sm text-gray-500 mt-4">
-            Already have an account?{" "}
-            <Button
-              variant="link"
-              className="p-0"
-              onClick={() => {
-                setIsSignUpOpen(false)
-                setIsSignInOpen(true)
-              }}
-            >
-              Sign in
-            </Button>
-          </p>
-        </DialogContent>
-      </Dialog>
+      <SignInModal />
+      <SignUpModal />
     </div>
   )
 }

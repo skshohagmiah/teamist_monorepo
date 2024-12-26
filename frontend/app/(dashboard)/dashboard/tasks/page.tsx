@@ -463,7 +463,7 @@ export default function TaskManagementBoard() {
   );
 
   return (
-    <div className="p-8 bg-white min-h-screen">
+    <div className="p-8  min-h-screen bg-gradient-to-b from-white via-white/90 to-black/20">
       {/* Team Members and Header Section */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Task Management</h1>
@@ -605,7 +605,7 @@ export default function TaskManagementBoard() {
                     <Card
                       ref={columnProvided.innerRef}
                       {...columnProvided.draggableProps}
-                      className="bg-gray-100"
+                      className="bg-white"
                     >
                       <CardHeader {...columnProvided.dragHandleProps} className="flex flex-row items-center justify-between">
                         <CardTitle className="flex items-center">

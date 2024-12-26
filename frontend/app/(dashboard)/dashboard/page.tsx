@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { CalendarIcon, MessageCircle, ImageIcon, Users, LogOut, Menu, PenTool, Bell } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { usePathname, useRouter } from 'next/navigation'
+import { useAuthStore } from '@/store/authenticationStore'
 
 export default function DashboardPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
@@ -14,17 +15,19 @@ export default function DashboardPage() {
   const pathname = usePathname()
 
 
-  useEffect(() => {
-    if (pathname?.includes('/dashboard')) {
-      router.push('/dashboard/tasks')
-    }
-  }, [])
+
+  // useEffect(() => {
+  //   if (pathname?.includes('/dashboard')) {
+  //     router.push('/dashboard/tasks')
+  //   }
+  // }, [])
 
 
-  return null;
+  // return null;
+
 
   return (
-    <div className="flex h-screen ">
+    <div className="flex h-screen bg-gradient-to-b  from-white via-white/90 to-black/20">
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Dashboard Content */}
